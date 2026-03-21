@@ -1,854 +1,1227 @@
-const STORAGE_KEY = "sustain-reminders-state-v3";
-const NOTIFICATION_INTERVAL_MS = 6 * 60 * 60 * 1000;
-const HERO_TIP_INTERVAL_MS = 30 * 1000;
+:root {
+  --bg: #f4f0e8;
+  --surface: rgba(255, 252, 246, 0.8);
+  --surface-strong: #fffaf0;
+  --text: #133127;
+  --muted: #5f7568;
+  --line: rgba(19, 49, 39, 0.12);
+  --accent: #1f7a4f;
+  --accent-deep: #0d5a38;
+  --accent-soft: #d7f1df;
+  --gold: #d59d37;
+  --shadow: 0 24px 60px rgba(20, 42, 34, 0.12);
+}
 
-const heroTips = [
-  "A reminder app that helps people turn good intentions into greener routines.",
-  "Bring your reusable bottle before you head out the door.",
-  "Take shorter showers and save water every single day.",
-  "Try a meat-free day today for a lighter footprint.",
-  "Turn off lights before leaving to cut wasted energy.",
-  "Small eco habits every day can build real climate impact."
-];
+* {
+  box-sizing: border-box;
+}
 
-const streakViews = [
-  { label: "Weekly streak", goal: 7, unit: "day", scale: "Goal: 7-day habit streak" },
-  { label: "Monthly streak", goal: 30, unit: "day", scale: "Goal: 30-day habit streak" },
-  { label: "Yearly streak", goal: 365, unit: "day", scale: "Goal: 365-day habit streak" }
-];
+html {
+  scroll-behavior: smooth;
+}
 
-const petStages = [
-  {
-    name: "Seedling planet",
-    threshold: 0,
-    mood: "Your tiny planet buddy is waiting for today's eco wins."
-  },
-  {
-    name: "Sprout world",
-    threshold: 5,
-    mood: "Terra has started sprouting leaves. Your streak is making the planet feel alive."
-  },
-  {
-    name: "Bloom world",
-    threshold: 10,
-    mood: "Terra is brighter and bolder now. Double-digit streak energy looks good on it."
-  },
-  {
-    name: "Orbit guardian",
-    threshold: 20,
-    mood: "Terra has entered guardian mode, spinning with confidence around your habit streak."
-  },
-  {
-    name: "Legendary eco world",
-    threshold: 35,
-    mood: "Terra is thriving. This streak has turned your little world into a full eco legend."
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Manrope", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 12% 16%, rgba(240, 194, 91, 0.34), transparent 30%),
+    radial-gradient(circle at 88% 14%, rgba(31, 122, 79, 0.3), transparent 32%),
+    radial-gradient(circle at 30% 82%, rgba(127, 227, 140, 0.2), transparent 24%),
+    linear-gradient(145deg, #fff6dc 0%, #f4efe3 34%, #e8f5ec 70%, #ddf0e4 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(19, 49, 39, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(19, 49, 39, 0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at center, black 55%, transparent 90%);
+}
+
+.page-shell {
+  width: min(1180px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 56px;
+}
+
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 60;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 18px;
+  background: rgba(13, 90, 56, 0.94);
+  color: #fffdf3;
+  box-shadow: 0 18px 40px rgba(13, 90, 56, 0.28);
+  backdrop-filter: blur(16px);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(16px);
+  transition: opacity 180ms ease, transform 180ms ease, background 220ms ease, border-color 220ms ease;
+}
+
+.toast[data-tone="error"] {
+  background: rgba(150, 43, 43, 0.95);
+  border-color: rgba(255, 214, 214, 0.42);
+  box-shadow: 0 18px 40px rgba(150, 43, 43, 0.24);
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.volume-dock {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(16px);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.volume-dock.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.volume-dock-title {
+  margin: 0 0 8px;
+  padding-left: 4px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.volume-slider {
+  width: 170px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.9);
+  box-shadow: 0 18px 40px rgba(20, 42, 34, 0.14);
+  backdrop-filter: blur(16px);
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.streak-banner {
+  position: sticky;
+  top: 10px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 26px;
+  margin-bottom: 22px;
+  padding: 24px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at left center, rgba(240, 194, 91, 0.2), transparent 24%),
+    linear-gradient(135deg, rgba(13, 90, 56, 0.96), rgba(31, 122, 79, 0.92));
+  color: #f7f7ef;
+  box-shadow: 0 20px 40px rgba(13, 90, 56, 0.22);
+  backdrop-filter: blur(18px);
+  transform-origin: top center;
+  transition: padding 180ms ease, transform 180ms ease, border-radius 180ms ease, box-shadow 180ms ease;
+}
+
+.streak-banner.is-condensed {
+  padding: 18px 24px;
+  border-radius: 24px;
+  transform: scale(0.965);
+  box-shadow: 0 16px 32px rgba(13, 90, 56, 0.2);
+}
+
+.streak-banner .eyebrow,
+.streak-scale,
+.streak-meta {
+  color: rgba(247, 247, 239, 0.8);
+}
+
+.streak-banner-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.streak-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#streakBannerLabel {
+  font-size: clamp(1rem, 2vw, 1.45rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #fffdf3;
+}
+
+.streak-arrow {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fffdf3;
+  font-size: 1.15rem;
+  box-shadow: none;
+}
+
+.streak-arrow:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.streak-headline {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.streak-headline strong {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(3.5rem, 8vw, 6.6rem);
+  line-height: 0.82;
+  letter-spacing: -0.04em;
+  color: #fffdf3;
+  text-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+}
+
+#streakBannerValue {
+  background: linear-gradient(180deg, #fff7cc 0%, #f0c25b 55%, #fffef7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.streak-meta {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.streak-banner-progress {
+  width: min(460px, 100%);
+  display: grid;
+  gap: 12px;
+}
+
+.streak-progress-track {
+  overflow: hidden;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.streak-progress-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f0c25b 0%, #f7e18d 30%, #7fe38c 100%);
+  box-shadow: 0 0 24px rgba(240, 194, 91, 0.34);
+  transition: width 240ms ease;
+}
+
+.streak-scale {
+  margin: 0;
+  text-align: right;
+  font-size: 1rem;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 32px;
+  background: rgba(255, 250, 240, 0.72);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  right: -60px;
+  top: -70px;
+  border-radius: 50%;
+  background: rgba(31, 122, 79, 0.13);
+}
+
+.topbar,
+.hero-grid,
+.stats-strip,
+.content-grid,
+.panel-head,
+.list-head,
+.reminder-main,
+.reminder-actions,
+.hero-actions,
+.brand {
+  display: flex;
+}
+
+.topbar,
+.panel-head,
+.list-head {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--accent) 0%, #5fbd73 100%);
+  color: white;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.eyebrow,
+.mini-label,
+.tag,
+.preset-frequency,
+.reminder-frequency {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.brand h1,
+.hero-copy h2,
+.panel h3,
+.stats-strip strong,
+.hero-card strong,
+.preset-card h4,
+.reminder-card h4 {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.brand h1 {
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+
+.hero-grid {
+  position: relative;
+  z-index: 1;
+  gap: 28px;
+  margin-top: 48px;
+  align-items: stretch;
+}
+
+.hero-copy {
+  flex: 1.2;
+}
+
+.tag {
+  margin: 0 0 14px;
+  color: var(--accent-deep);
+}
+
+.hero-copy h2 {
+  max-width: 12ch;
+  font-size: clamp(2.8rem, 5vw, 5.2rem);
+  line-height: 0.95;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.hero-tip-changing {
+  opacity: 0.35;
+  transform: translateY(6px);
+}
+
+.hero-text {
+  max-width: 62ch;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.hero-actions {
+  gap: 14px;
+  margin: 28px 0;
+  flex-wrap: wrap;
+}
+
+.hero-points {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.hero-points li,
+.stats-strip article,
+.preset-card,
+.reminder-card,
+.hero-card {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(10px);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.hero-points li {
+  padding: 14px 16px;
+  border-radius: 18px;
+}
+
+.hero-card {
+  width: min(360px, 100%);
+  padding: 24px;
+  border-radius: 28px;
+  align-self: center;
+}
+
+.focus-list {
+  display: grid;
+  gap: 14px;
+  margin: 18px 0 24px;
+}
+
+.focus-list article {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.focus-list article:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.focus-list span,
+.supporting,
+label,
+.pill,
+.impact-badge,
+.cooldown-note,
+.delete-button,
+.complete-button,
+.notify-note {
+  color: var(--muted);
+}
+
+.notify-note {
+  max-width: 62ch;
+  margin: 0 0 24px;
+  line-height: 1.6;
+}
+
+.card-meter {
+  padding: 18px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(31, 122, 79, 0.12), rgba(213, 157, 55, 0.18));
+}
+
+.stats-strip {
+  gap: 16px;
+  margin: 24px 0;
+  flex-wrap: wrap;
+}
+
+.stats-strip article {
+  flex: 1 1 180px;
+  padding: 20px;
+  border-radius: 24px;
+}
+
+.stats-strip p {
+  margin: 0 0 8px;
+  color: var(--muted);
+}
+
+.content-grid {
+  gap: 24px;
+  align-items: start;
+}
+
+.pet-companion {
+  position: fixed;
+  top: 120px;
+  left: calc(100vw - 260px);
+  z-index: 55;
+  width: 220px;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.pet-mood-bubble {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 24px;
+  background: rgba(255, 253, 247, 0.86);
+  box-shadow: 0 20px 40px rgba(20, 42, 34, 0.16);
+  backdrop-filter: blur(16px);
+}
+
+.pet-stage-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  margin-bottom: 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(240, 194, 91, 0.24), rgba(127, 227, 140, 0.24));
+  color: var(--accent-deep);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pet-mood {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.pet-growth-mini {
+  overflow: hidden;
+  height: 10px;
+  margin: 12px 0 8px;
+  border-radius: 999px;
+  background: rgba(19, 49, 39, 0.08);
+}
+
+.pet-growth-mini-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #f0c25b 0%, #84db79 42%, #46b2d6 100%);
+  transition: width 220ms ease;
+}
+
+.pet-growth-text,
+.pet-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.pet-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 150px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.pet-button:hover .pet-avatar,
+.pet-button:focus-visible .pet-avatar,
+.pet-button.is-excited .pet-avatar {
+  transform: translateY(-8px) scale(calc(var(--pet-scale, 1.02) * 1.06));
+}
+
+.pet-button:focus-visible {
+  outline: none;
+}
+
+.pet-button:focus-visible .pet-aura {
+  box-shadow: 0 0 0 4px rgba(31, 122, 79, 0.18);
+}
+
+.pet-aura {
+  position: absolute;
+  width: 172px;
+  height: 172px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(127, 227, 140, 0.44), rgba(127, 227, 140, 0) 62%),
+    radial-gradient(circle, rgba(240, 194, 91, 0.22), rgba(240, 194, 91, 0) 70%);
+  filter: blur(4px);
+  opacity: 0.95;
+  animation: petPulse 2.6s ease-in-out infinite;
+}
+
+.pet-spark {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 248, 200, 0.95), rgba(255, 248, 200, 0));
+  opacity: 0.55;
+  animation: petTwinkle 2.2s ease-in-out infinite;
+}
+
+.pet-spark-1 {
+  top: 16px;
+  right: 16px;
+}
+
+.pet-spark-2 {
+  left: 10px;
+  top: 44px;
+  animation-delay: 0.6s;
+}
+
+.pet-spark-3 {
+  right: 22px;
+  bottom: 18px;
+  animation-delay: 1.1s;
+}
+
+.pet-companion.is-bursting .pet-spark {
+  animation: petBurst 700ms ease-out;
+}
+
+.pet-avatar {
+  --pet-scale: 1;
+  position: relative;
+  width: 122px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 28% 28%, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0) 22%),
+    radial-gradient(circle at 38% 34%, rgba(141, 230, 164, 0.9), rgba(141, 230, 164, 0) 18%),
+    linear-gradient(180deg, #7fd7ff 0%, #4cb66d 54%, #185f76 100%);
+  box-shadow:
+    inset -12px -18px 28px rgba(8, 58, 74, 0.36),
+    0 22px 36px rgba(17, 72, 50, 0.18);
+  transition: transform 180ms ease, filter 220ms ease, box-shadow 220ms ease;
+  transform: scale(var(--pet-scale));
+}
+
+.pet-avatar::before,
+.pet-avatar::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(36, 131, 73, 0.95);
+}
+
+.pet-avatar::before {
+  width: 58px;
+  height: 36px;
+  left: 24px;
+  top: 42px;
+  transform: rotate(-18deg);
+}
+
+.pet-avatar::after {
+  width: 46px;
+  height: 28px;
+  right: 22px;
+  bottom: 34px;
+  transform: rotate(22deg);
+}
+
+.pet-face {
+  position: absolute;
+  inset: 0;
+}
+
+.pet-eye,
+.pet-mouth {
+  position: absolute;
+  background: #103229;
+}
+
+.pet-eye {
+  top: 58px;
+  width: 14px;
+  height: 18px;
+  border-radius: 50%;
+}
+
+.pet-eye-left {
+  left: 46px;
+}
+
+.pet-eye-right {
+  right: 46px;
+}
+
+.pet-mouth {
+  left: 50%;
+  bottom: 44px;
+  width: 32px;
+  height: 16px;
+  border-radius: 0 0 18px 18px;
+  transform: translateX(-50%);
+  clip-path: inset(45% 0 0 0);
+}
+
+.pet-leaf,
+.pet-orbit {
+  position: absolute;
+  opacity: 0;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.pet-leaf {
+  width: 34px;
+  height: 54px;
+  border-radius: 100% 0;
+  background: linear-gradient(180deg, #9cf08f, #2a9f4b);
+  box-shadow: inset -4px -6px 10px rgba(10, 84, 44, 0.22);
+}
+
+.pet-leaf-left {
+  top: -12px;
+  left: 26px;
+  transform: rotate(-28deg) scale(0.8);
+}
+
+.pet-leaf-right {
+  top: -20px;
+  right: 22px;
+  transform: rotate(18deg) scale(0.8);
+}
+
+.pet-orbit {
+  inset: -16px;
+  border: 2px dashed rgba(240, 194, 91, 0.7);
+  border-radius: 50%;
+  animation: petOrbit 8s linear infinite;
+}
+
+.pet-avatar.pet-stage-0 {
+  --pet-scale: 0.86;
+  filter: saturate(0.95);
+}
+
+.pet-avatar.pet-stage-1 {
+  --pet-scale: 1;
+}
+
+.pet-avatar.pet-stage-1 .pet-leaf-left {
+  opacity: 1;
+}
+
+.pet-avatar.pet-stage-2 {
+  --pet-scale: 1.12;
+}
+
+.pet-avatar.pet-stage-2 .pet-leaf {
+  opacity: 1;
+}
+
+.pet-avatar.pet-stage-3 {
+  --pet-scale: 1.24;
+  box-shadow:
+    inset -12px -18px 28px rgba(8, 58, 74, 0.34),
+    0 26px 42px rgba(17, 72, 50, 0.22);
+}
+
+.pet-avatar.pet-stage-3 .pet-leaf,
+.pet-avatar.pet-stage-3 .pet-orbit {
+  opacity: 1;
+}
+
+.pet-avatar.pet-stage-4 {
+  --pet-scale: 1.36;
+  filter: saturate(1.12) brightness(1.02);
+  box-shadow:
+    inset -12px -18px 28px rgba(8, 58, 74, 0.28),
+    0 28px 48px rgba(17, 72, 50, 0.26);
+}
+
+.pet-avatar.pet-stage-4 .pet-leaf,
+.pet-avatar.pet-stage-4 .pet-orbit {
+  opacity: 1;
+}
+
+.pet-avatar.pet-stage-4::before {
+  width: 62px;
+  height: 38px;
+}
+
+.pet-avatar.pet-stage-4::after {
+  width: 52px;
+  height: 30px;
+}
+
+@keyframes petPulse {
+  0%,
+  100% {
+    transform: scale(0.96);
+    opacity: 0.7;
   }
-];
 
-const presetHabits = [
-  { title: "Bring reusable bottle", frequency: "daily", impact: "both", co2: 0.2, water: 3 },
-  { title: "Turn off lights before leaving", frequency: "daily", impact: "co2", co2: 0.4, water: 0 },
-  { title: "Meat-free day today", frequency: "weekly", impact: "both", co2: 2.1, water: 120 },
-  { title: "Take shorter shower", frequency: "daily", impact: "water", co2: 0.1, water: 35 },
-  { title: "Walk for nearby errands", frequency: "weekly", impact: "co2", co2: 1.4, water: 0 },
-  { title: "Wash clothes in cold water", frequency: "weekly", impact: "both", co2: 0.8, water: 18 }
-];
-
-const defaultState = {
-  reminders: presetHabits.slice(0, 3).map((habit, index) => ({
-    id: `preset-${index}`,
-    ...habit,
-    completions: 0,
-    lastCompletedDate: null
-  })),
-  streak: {
-    current: 0,
-    best: 0,
-    lastIncrementDate: null
-  }
-};
-
-const elements = {
-  presetList: document.getElementById("presetList"),
-  reminderList: document.getElementById("reminderList"),
-  reminderForm: document.getElementById("reminderForm"),
-  titleInput: document.getElementById("titleInput"),
-  frequencyInput: document.getElementById("frequencyInput"),
-  impactInput: document.getElementById("impactInput"),
-  heroTip: document.getElementById("heroTip"),
-  streakPrevButton: document.getElementById("streakPrevButton"),
-  streakNextButton: document.getElementById("streakNextButton"),
-  streakBanner: document.querySelector(".streak-banner"),
-  streakBannerLabel: document.getElementById("streakBannerLabel"),
-  reminderCount: document.getElementById("reminderCount"),
-  completedCount: document.getElementById("completedCount"),
-  currentStreak: document.getElementById("currentStreak"),
-  streakBannerValue: document.getElementById("streakBannerValue"),
-  streakBannerMeta: document.getElementById("streakBannerMeta"),
-  streakBannerFill: document.getElementById("streakBannerFill"),
-  streakScale: document.getElementById("streakScale"),
-  co2Value: document.getElementById("co2Value"),
-  waterValue: document.getElementById("waterValue"),
-  bestStreak: document.getElementById("bestStreak"),
-  heroStreak: document.getElementById("heroStreak"),
-  notifyButton: document.getElementById("notifyButton"),
-  notifyStatus: document.getElementById("notifyStatus"),
-  toast: document.getElementById("toast"),
-  volumeDock: document.getElementById("volumeDock"),
-  volumeDockTitle: document.getElementById("volumeDockTitle"),
-  volumeSlider: document.getElementById("volumeSlider"),
-  petButton: document.getElementById("petButton"),
-  petAvatar: document.getElementById("petAvatar"),
-  petStage: document.getElementById("petStage"),
-  petMood: document.getElementById("petMood"),
-  petGrowthFill: document.getElementById("petGrowthFill"),
-  petGrowthText: document.getElementById("petGrowthText"),
-  presetTemplate: document.getElementById("presetTemplate"),
-  reminderTemplate: document.getElementById("reminderTemplate")
-};
-
-let state = loadState();
-let notificationTimer = null;
-let midnightResetTimer = null;
-let cooldownTicker = null;
-let heroTipIndex = 0;
-let heroTipTimer = null;
-let streakViewIndex = 0;
-let toastTimer = null;
-let audioContext = null;
-let masterGain = null;
-let chordTimer = null;
-let noiseNodes = [];
-let volumeHideTimer = null;
-let volumeCountdownTimer = null;
-let musicVolume = 0.35;
-let streakBannerTriggerTop = 0;
-let petExciteTimer = null;
-
-function loadState() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) {
-    return structuredClone(defaultState);
-  }
-
-  try {
-    const parsed = JSON.parse(saved);
-    return {
-      reminders: Array.isArray(parsed.reminders)
-        ? parsed.reminders.map((reminder) => ({
-            ...reminder,
-            completions: Number.isFinite(reminder.completions) ? reminder.completions : 0,
-            lastCompletedDate: typeof reminder.lastCompletedDate === "string" ? reminder.lastCompletedDate : null
-          }))
-        : structuredClone(defaultState.reminders),
-      streak: {
-        current: Number.isFinite(parsed.streak?.current) ? parsed.streak.current : 0,
-        best: Number.isFinite(parsed.streak?.best) ? parsed.streak.best : 0,
-        lastIncrementDate: typeof parsed.streak?.lastIncrementDate === "string" ? parsed.streak.lastIncrementDate : null
-      }
-    };
-  } catch {
-    return structuredClone(defaultState);
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
   }
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function getTodayKey() {
-  return new Date().toLocaleDateString("en-CA");
-}
-
-function getMillisecondsUntilNextMidnight() {
-  const now = new Date();
-  const nextMidnight = new Date(now);
-  nextMidnight.setHours(24, 0, 0, 0);
-  return nextMidnight.getTime() - now.getTime();
-}
-
-function formatCooldown(msRemaining) {
-  const totalSeconds = Math.max(0, Math.floor(msRemaining / 1000));
-  const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, "0");
-  const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, "0");
-  const seconds = String(totalSeconds % 60).padStart(2, "0");
-  return `${hours}:${minutes}:${seconds}`;
-}
-
-function updateCooldownLabels() {
-  const cooldownText = `Resets in ${formatCooldown(getMillisecondsUntilNextMidnight())}`;
-  document.querySelectorAll(".cooldown-note[data-active='true']").forEach((element) => {
-    element.textContent = cooldownText;
-  });
-}
-
-function showNextHeroTip() {
-  if (!elements.heroTip) {
-    return;
+@keyframes petTwinkle {
+  0%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.35;
   }
 
-  elements.heroTip.classList.add("hero-tip-changing");
-  window.setTimeout(() => {
-    heroTipIndex = (heroTipIndex + 1) % heroTips.length;
-    elements.heroTip.textContent = heroTips[heroTipIndex];
-    elements.heroTip.classList.remove("hero-tip-changing");
-  }, 220);
-}
-
-function startHeroTipRotation() {
-  if (!elements.heroTip) {
-    return;
-  }
-
-  elements.heroTip.textContent = heroTips[heroTipIndex];
-
-  if (heroTipTimer) {
-    clearInterval(heroTipTimer);
-  }
-
-  heroTipTimer = window.setInterval(showNextHeroTip, HERO_TIP_INTERVAL_MS);
-}
-
-function startCooldownTicker() {
-  if (cooldownTicker) {
-    clearInterval(cooldownTicker);
-  }
-
-  updateCooldownLabels();
-  cooldownTicker = window.setInterval(updateCooldownLabels, 1000);
-}
-
-function scheduleMidnightRefresh() {
-  if (midnightResetTimer) {
-    clearTimeout(midnightResetTimer);
-  }
-
-  midnightResetTimer = window.setTimeout(() => {
-    render();
-    scheduleMidnightRefresh();
-  }, getMillisecondsUntilNextMidnight());
-}
-
-function isCompletedToday(reminder) {
-  return reminder.lastCompletedDate === getTodayKey();
-}
-
-function getPendingReminders() {
-  return state.reminders.filter((reminder) => !isCompletedToday(reminder));
-}
-
-function updateDailyStreakIfComplete() {
-  const todayKey = getTodayKey();
-
-  if (!state.reminders.length) {
-    return;
-  }
-
-  if (state.streak.lastIncrementDate === todayKey) {
-    return;
-  }
-
-  if (getPendingReminders().length > 0) {
-    return;
-  }
-
-  state.streak.current += 1;
-  state.streak.best = Math.max(state.streak.best, state.streak.current);
-  state.streak.lastIncrementDate = todayKey;
-}
-
-function getNotificationMessage() {
-  const titles = getPendingReminders()
-    .slice(0, 3)
-    .map((reminder) => reminder.title);
-
-  if (!titles.length) {
-    return "";
-  }
-
-  return `Eco reminder: ${titles.join(" | ")}`;
-}
-
-function sendSustainNotification() {
-  if (!("Notification" in window) || Notification.permission !== "granted") {
-    return;
-  }
-
-  const message = getNotificationMessage();
-  if (!message) {
-    return;
-  }
-
-  new Notification("Sustain reminder", {
-    body: message,
-    tag: "sustain-6-hour-nudge"
-  });
-}
-
-function startNotificationLoop() {
-  if (!("Notification" in window) || Notification.permission !== "granted") {
-    return;
-  }
-
-  if (notificationTimer) {
-    clearInterval(notificationTimer);
-  }
-
-  sendSustainNotification();
-  notificationTimer = window.setInterval(sendSustainNotification, NOTIFICATION_INTERVAL_MS);
-}
-
-function updateNotificationUI() {
-  if (!("Notification" in window)) {
-    elements.notifyButton.disabled = true;
-    elements.notifyStatus.textContent = "This browser does not support notifications for this demo.";
-    return;
-  }
-
-  if (Notification.permission === "granted") {
-    elements.notifyButton.textContent = "Enabled";
-    elements.notifyStatus.textContent = getPendingReminders().length
-      ? "Browser notifications are on. You will get a nudge every 6 hours only for reminders that are not done yet today."
-      : "Browser notifications are on, and every reminder has already been completed today.";
-    return;
-  }
-
-  if (Notification.permission === "denied") {
-    elements.notifyButton.textContent = "Notifications blocked";
-    elements.notifyStatus.textContent = "Notifications are blocked in this browser. Allow them in site settings if you want 6-hour reminder nudges.";
-    return;
-  }
-
-  elements.notifyButton.textContent = "Enable 6-hour reminders";
-  elements.notifyStatus.textContent = "Notifications are off. Turn them on to get a sustainable habit nudge every 6 hours while this page is open.";
-}
-
-function showToast(message, tone = "success") {
-  if (!elements.toast) {
-    return;
-  }
-
-  elements.toast.textContent = message;
-  elements.toast.dataset.tone = tone;
-  elements.toast.classList.add("is-visible");
-
-  if (toastTimer) {
-    clearTimeout(toastTimer);
-  }
-
-  toastTimer = window.setTimeout(() => {
-    elements.toast.classList.remove("is-visible");
-  }, 2600);
-}
-
-function stopLofiLoop() {
-  if (chordTimer) {
-    clearInterval(chordTimer);
-    chordTimer = null;
-  }
-
-  noiseNodes.forEach((node) => {
-    try {
-      node.stop();
-    } catch {
-      // noop
-    }
-  });
-  noiseNodes = [];
-
-  if (masterGain) {
-    masterGain.gain.cancelScheduledValues(audioContext.currentTime);
-    masterGain.gain.setTargetAtTime(0.0001, audioContext.currentTime, 0.2);
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
   }
 }
 
-function updateMasterVolume() {
-  if (!audioContext || !masterGain) {
-    return;
+@keyframes petBurst {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.3;
   }
 
-  masterGain.gain.cancelScheduledValues(audioContext.currentTime);
-  if (musicVolume <= 0) {
-    masterGain.gain.setValueAtTime(masterGain.gain.value, audioContext.currentTime);
-    masterGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.16);
-    return;
+  65% {
+    transform: scale(2.1);
+    opacity: 1;
   }
 
-  masterGain.gain.setTargetAtTime(musicVolume * 0.38, audioContext.currentTime, 0.2);
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
 }
 
-function showVolumeDock() {
-  if (!elements.volumeDock) {
-    return;
+@keyframes petOrbit {
+  from {
+    transform: rotate(0deg);
   }
 
-  elements.volumeDock.classList.add("is-visible");
-
-  if (elements.volumeDockTitle) {
-    elements.volumeDockTitle.textContent = "Lo-fi Music (15s)";
+  to {
+    transform: rotate(360deg);
   }
-
-  if (volumeHideTimer) {
-    clearTimeout(volumeHideTimer);
-  }
-
-  if (volumeCountdownTimer) {
-    clearInterval(volumeCountdownTimer);
-  }
-
-  let secondsRemaining = 15;
-  volumeCountdownTimer = window.setInterval(() => {
-    secondsRemaining -= 1;
-
-    if (secondsRemaining <= 0) {
-      clearInterval(volumeCountdownTimer);
-      volumeCountdownTimer = null;
-      return;
-    }
-
-    if (elements.volumeDockTitle) {
-      elements.volumeDockTitle.textContent = `Lo-fi Music (${secondsRemaining}s)`;
-    }
-  }, 1000);
-
-  volumeHideTimer = window.setTimeout(() => {
-    elements.volumeDock.classList.remove("is-visible");
-    if (volumeCountdownTimer) {
-      clearInterval(volumeCountdownTimer);
-      volumeCountdownTimer = null;
-    }
-  }, 15000);
 }
 
-function updateStreakBannerScrollState() {
-  if (!elements.streakBanner) {
-    return;
-  }
-
-  elements.streakBanner.classList.toggle("is-condensed", window.scrollY > streakBannerTriggerTop);
+.planner-panel {
+  flex: 1.15;
 }
 
-function createNoiseBuffer(context) {
-  const buffer = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
-  const channel = buffer.getChannelData(0);
-  for (let index = 0; index < channel.length; index += 1) {
-    channel[index] = (Math.random() * 2 - 1) * 0.16;
-  }
-  return buffer;
+.library-panel {
+  flex: 0.85;
 }
 
-function scheduleChord(context, startTime, frequencies) {
-  frequencies.forEach((frequency, index) => {
-    const oscillator = context.createOscillator();
-    const noteGain = context.createGain();
-    const filter = context.createBiquadFilter();
-
-    oscillator.type = index === 0 ? "triangle" : "sine";
-    oscillator.frequency.setValueAtTime(frequency, startTime);
-
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(1100, startTime);
-    filter.Q.setValueAtTime(0.9, startTime);
-
-    noteGain.gain.setValueAtTime(0.0001, startTime);
-    noteGain.gain.linearRampToValueAtTime(index === 0 ? 0.07 : 0.045, startTime + 0.8);
-    noteGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 5.2);
-
-    oscillator.connect(filter);
-    filter.connect(noteGain);
-    noteGain.connect(masterGain);
-
-    oscillator.start(startTime);
-    oscillator.stop(startTime + 5.4);
-  });
+.panel {
+  padding: 24px;
+  border-radius: 28px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
 }
 
-function startLofiLoop() {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) {
-    showToast("This browser does not support audio for lo-fi mode.", "error");
-    return;
-  }
-
-  if (!audioContext) {
-    audioContext = new AudioContextClass();
-    masterGain = audioContext.createGain();
-    masterGain.gain.value = 0.0001;
-    masterGain.connect(audioContext.destination);
-  }
-
-  if (audioContext.state === "suspended") {
-    audioContext.resume();
-  }
-
-  stopLofiLoop();
-
-  const now = audioContext.currentTime;
-  updateMasterVolume();
-
-  const noiseSource = audioContext.createBufferSource();
-  const noiseFilter = audioContext.createBiquadFilter();
-  const noiseGain = audioContext.createGain();
-  noiseSource.buffer = createNoiseBuffer(audioContext);
-  noiseSource.loop = true;
-  noiseFilter.type = "lowpass";
-  noiseFilter.frequency.value = 900;
-  noiseGain.gain.value = 0.018;
-  noiseSource.connect(noiseFilter);
-  noiseFilter.connect(noiseGain);
-  noiseGain.connect(masterGain);
-  noiseSource.start();
-  noiseNodes = [noiseSource];
-
-  const chords = [
-    [261.63, 329.63, 392.0],
-    [220.0, 277.18, 329.63],
-    [174.61, 220.0, 261.63],
-    [196.0, 246.94, 293.66]
-  ];
-
-  let step = 0;
-  scheduleChord(audioContext, now, chords[step]);
-  chordTimer = window.setInterval(() => {
-    step = (step + 1) % chords.length;
-    scheduleChord(audioContext, audioContext.currentTime, chords[step]);
-  }, 4200);
+.reminder-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 14px;
+  margin: 22px 0 32px;
 }
 
-function createReminder(reminder) {
-  return {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-    completions: 0,
-    lastCompletedDate: null,
-    co2: reminder.impact === "water" ? 0.1 : reminder.impact === "co2" ? 0.5 : 0.3,
-    water: reminder.impact === "co2" ? 0 : reminder.impact === "water" ? 25 : 10,
-    ...reminder
-  };
+label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.95rem;
 }
 
-function formatFrequency(value) {
-  return value === "weekly" ? "Weekly rhythm" : "Daily nudge";
+input,
+select,
+button {
+  font: inherit;
 }
 
-function formatImpact(value) {
-  if (value === "co2") {
-    return "CO2 saver";
-  }
-  if (value === "water") {
-    return "Water saver";
-  }
-  return "Mixed impact";
+input,
+select {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--text);
 }
 
-function getImpactTotals() {
-  return state.reminders.reduce(
-    (totals, reminder) => {
-      totals.completions += reminder.completions;
-      totals.co2 += reminder.completions * reminder.co2;
-      totals.water += reminder.completions * reminder.water;
-      return totals;
-    },
-    { completions: 0, co2: 0, water: 0 }
-  );
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 48px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--accent-deep) 50%),
+    linear-gradient(135deg, var(--accent-deep) 50%, transparent 50%),
+    linear-gradient(180deg, rgba(31, 122, 79, 0.1), rgba(31, 122, 79, 0.04));
+  background-position:
+    calc(100% - 24px) calc(50% - 3px),
+    calc(100% - 18px) calc(50% - 3px),
+    100% 0;
+  background-size:
+    6px 6px,
+    6px 6px,
+    44px 100%;
+  background-repeat: no-repeat;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  cursor: pointer;
 }
 
-function getPetProfile(streakCount) {
-  let stageIndex = 0;
-
-  petStages.forEach((stage, index) => {
-    if (streakCount >= stage.threshold) {
-      stageIndex = index;
-    }
-  });
-
-  const currentStage = petStages[stageIndex];
-  const nextStage = petStages[stageIndex + 1] || null;
-  const previousThreshold = currentStage.threshold;
-  const nextThreshold = nextStage ? nextStage.threshold : currentStage.threshold;
-  const span = Math.max(nextThreshold - previousThreshold, 1);
-  const progress = nextStage ? (streakCount - previousThreshold) / span : 1;
-
-  return {
-    stageIndex,
-    currentStage,
-    nextStage,
-    progress: Math.max(0, Math.min(progress, 1))
-  };
+select:hover {
+  border-color: rgba(31, 122, 79, 0.28);
 }
 
-function animatePetExcitement() {
-  if (!elements.petButton) {
-    return;
-  }
-
-  elements.petButton.classList.add("is-excited");
-
-  if (petExciteTimer) {
-    clearTimeout(petExciteTimer);
-  }
-
-  petExciteTimer = window.setTimeout(() => {
-    elements.petButton.classList.remove("is-excited");
-  }, 700);
+input:focus,
+select:focus {
+  outline: none;
+  border-color: rgba(31, 122, 79, 0.5);
+  box-shadow:
+    0 0 0 4px rgba(31, 122, 79, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
-function getPetCheerLine(profile) {
-  const remaining = profile.nextStage ? profile.nextStage.threshold - state.streak.current : 0;
-
-  if (!state.streak.current) {
-    return "Terra says: finish today's habits and I'll start growing leaves.";
-  }
-
-  if (!profile.nextStage) {
-    return "Terra says: we're at max form now, so let's keep this world glowing.";
-  }
-
-  if (remaining === 1) {
-    return "Terra says: one more streak day and I evolve again.";
-  }
-
-  return `Terra says: ${remaining} more streak days until my ${profile.nextStage.name.toLowerCase()} form.`;
+button,
+.ghost-button,
+.primary-button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  border-radius: 999px;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
 }
 
-function renderPresets() {
-  elements.presetList.innerHTML = "";
-
-  presetHabits.forEach((habit) => {
-    const node = elements.presetTemplate.content.firstElementChild.cloneNode(true);
-    node.querySelector(".preset-frequency").textContent = formatFrequency(habit.frequency);
-    node.querySelector("h4").textContent = habit.title;
-    node.querySelector(".add-preset").addEventListener("click", () => {
-      const duplicate = state.reminders.some((reminder) => reminder.title === habit.title);
-      if (duplicate) {
-        return;
-      }
-      state.reminders.unshift(createReminder(habit));
-      saveState();
-      render();
-    });
-    elements.presetList.appendChild(node);
-  });
+button:hover,
+.ghost-button:hover,
+.primary-button:hover,
+.secondary-button:hover {
+  transform: translateY(-1px);
 }
 
-function renderReminders() {
-  elements.reminderList.innerHTML = "";
-  elements.reminderCount.textContent = `${state.reminders.length} reminder${state.reminders.length === 1 ? "" : "s"}`;
-
-  if (!state.reminders.length) {
-    const empty = document.createElement("div");
-    empty.className = "empty-state";
-    empty.textContent = "No reminders yet. Add one from the form or starter pack.";
-    elements.reminderList.appendChild(empty);
-    return;
-  }
-
-  state.reminders.forEach((reminder) => {
-    const node = elements.reminderTemplate.content.firstElementChild.cloneNode(true);
-    const completedToday = isCompletedToday(reminder);
-    const completeButton = node.querySelector(".complete-button");
-    const cooldownNote = node.querySelector(".cooldown-note");
-
-    node.querySelector(".reminder-frequency").textContent = formatFrequency(reminder.frequency);
-    node.querySelector("h4").textContent = reminder.title;
-    node.querySelector(".impact-badge").textContent = formatImpact(reminder.impact);
-    node.querySelector(".completion-count").textContent = completedToday
-      ? `${reminder.completions} completion${reminder.completions === 1 ? "" : "s"} logged | done today`
-      : `${reminder.completions} completion${reminder.completions === 1 ? "" : "s"} logged`;
-    node.querySelector(".progress-fill").style.width = `${(Math.min(reminder.completions, 7) / 7) * 100}%`;
-
-    completeButton.disabled = completedToday;
-    completeButton.textContent = completedToday ? "Done today" : "Mark done";
-    cooldownNote.dataset.active = completedToday ? "true" : "false";
-    cooldownNote.textContent = completedToday ? `Resets in ${formatCooldown(getMillisecondsUntilNextMidnight())}` : "";
-    completeButton.addEventListener("click", () => {
-      try {
-        if (isCompletedToday(reminder)) {
-          throw new Error("already-completed");
-        }
-
-        reminder.completions += 1;
-        reminder.lastCompletedDate = getTodayKey();
-        updateDailyStreakIfComplete();
-        saveState();
-        render();
-        showToast(`Marked "${reminder.title}" as done.`);
-      } catch {
-        showToast("Failed to complete reminder.", "error");
-      }
-    });
-
-    node.querySelector(".delete-button").addEventListener("click", () => {
-      try {
-        const nextReminders = state.reminders.filter((item) => item.id !== reminder.id);
-        if (nextReminders.length === state.reminders.length) {
-          throw new Error("missing-reminder");
-        }
-
-        state.reminders = nextReminders;
-        saveState();
-        render();
-        showToast(`Deleted "${reminder.title}".`);
-      } catch {
-        showToast("Failed to delete reminder.", "error");
-      }
-    });
-
-    elements.reminderList.appendChild(node);
-  });
+.primary-button {
+  padding: 14px 22px;
+  border: 0;
+  color: white;
+  background: linear-gradient(135deg, var(--accent-deep), var(--accent));
+  box-shadow: 0 12px 24px rgba(31, 122, 79, 0.24);
+  cursor: pointer;
 }
 
-function renderImpact() {
-  const totals = getImpactTotals();
-  const activeView = streakViews[streakViewIndex];
-  const streakGoal = activeView.goal;
-  const displayedProgress = Math.min(state.streak.current, streakGoal);
-  const remainingDays = Math.max(streakGoal - displayedProgress, 0);
-
-  elements.completedCount.textContent = totals.completions;
-  elements.currentStreak.textContent = state.streak.current;
-  elements.streakBannerLabel.textContent = activeView.label;
-  elements.streakBannerValue.textContent = state.streak.current;
-  elements.streakBannerFill.style.width = `${(displayedProgress / streakGoal) * 100}%`;
-  elements.streakBannerMeta.textContent = remainingDays
-    ? `${remainingDays} more ${activeView.unit}${remainingDays === 1 ? "" : "s"} to hit your ${activeView.label.toLowerCase()}.`
-    : `${activeView.label} reached. Keep the streak glowing.`;
-  elements.streakScale.textContent = activeView.scale;
-  elements.co2Value.textContent = totals.co2.toFixed(1);
-  elements.waterValue.textContent = Math.round(totals.water);
-  elements.bestStreak.textContent = state.streak.best;
-  elements.heroStreak.textContent = state.streak.current;
+.secondary-button,
+.ghost-button,
+.complete-button,
+.delete-button {
+  padding: 12px 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.76);
 }
 
-function renderPet() {
-  if (!elements.petAvatar) {
-    return;
-  }
-
-  const profile = getPetProfile(state.streak.current);
-  elements.petAvatar.className = `pet-avatar pet-stage-${profile.stageIndex}`;
-  elements.petStage.textContent = profile.currentStage.name;
-  elements.petMood.textContent = profile.currentStage.mood;
-  elements.petGrowthFill.style.width = `${profile.progress * 100}%`;
-
-  if (!profile.nextStage) {
-    elements.petGrowthText.textContent = "Terra has reached the final growth stage. Keep your streak alive to protect the planet.";
-    return;
-  }
-
-  const remaining = profile.nextStage.threshold - state.streak.current;
-  elements.petGrowthText.textContent = `${remaining} streak day${remaining === 1 ? "" : "s"} to reach ${profile.nextStage.name.toLowerCase()}.`;
+.ghost-button {
+  color: var(--text);
 }
 
-function render() {
-  renderPresets();
-  renderReminders();
-  renderImpact();
-  renderPet();
-  updateNotificationUI();
-  updateCooldownLabels();
+.notify-button {
+  position: relative;
+  gap: 10px;
+  border: 1px solid rgba(168, 54, 54, 0.55);
+  background: linear-gradient(180deg, rgba(255, 245, 245, 0.92), rgba(255, 255, 255, 0.82));
+  box-shadow: 0 10px 24px rgba(168, 54, 54, 0.12);
+  transition:
+    transform 180ms ease,
+    box-shadow 220ms ease,
+    background 220ms ease,
+    border-color 220ms ease,
+    color 220ms ease;
 }
 
-elements.reminderForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-
-  const title = elements.titleInput.value.trim();
-  if (!title) {
-    return;
-  }
-
-  try {
-    const reminder = createReminder({
-      title,
-      frequency: elements.frequencyInput.value,
-      impact: elements.impactInput.value
-    });
-
-    state.reminders.unshift(reminder);
-    elements.reminderForm.reset();
-    saveState();
-    render();
-    showToast(`Added "${title}" to your reminders.`);
-  } catch {
-    showToast("Failed to add reminder.", "error");
-  }
-});
-
-elements.notifyButton.addEventListener("click", async () => {
-  if (!("Notification" in window)) {
-    updateNotificationUI();
-    return;
-  }
-
-  const permission = await Notification.requestPermission();
-  if (permission === "granted") {
-    startNotificationLoop();
-  }
-  updateNotificationUI();
-});
-
-elements.volumeSlider.addEventListener("input", () => {
-  musicVolume = Number(elements.volumeSlider.value) / 100;
-  if (musicVolume > 0) {
-    startLofiLoop();
-  } else {
-    updateMasterVolume();
-  }
-  updateMasterVolume();
-  showVolumeDock();
-});
-
-elements.volumeDock.addEventListener("pointerdown", () => {
-  showVolumeDock();
-});
-
-elements.petButton?.addEventListener("click", () => {
-  const profile = getPetProfile(state.streak.current);
-  animatePetExcitement();
-  showToast(getPetCheerLine(profile));
-});
-
-window.addEventListener("mousemove", (event) => {
-  if (event.clientX <= 240 && event.clientY >= window.innerHeight - 180) {
-    showVolumeDock();
-  }
-});
-
-window.addEventListener("scroll", updateStreakBannerScrollState, { passive: true });
-
-window.addEventListener("resize", () => {
-  if (!elements.streakBanner) {
-    return;
-  }
-
-  streakBannerTriggerTop = Math.max(elements.streakBanner.offsetTop - 10, 0);
-  updateStreakBannerScrollState();
-});
-
-elements.streakPrevButton.addEventListener("click", () => {
-  streakViewIndex = (streakViewIndex - 1 + streakViews.length) % streakViews.length;
-  renderImpact();
-});
-
-elements.streakNextButton.addEventListener("click", () => {
-  streakViewIndex = (streakViewIndex + 1) % streakViews.length;
-  renderImpact();
-});
-
-render();
-if (elements.streakBanner) {
-  streakBannerTriggerTop = Math.max(elements.streakBanner.offsetTop - 10, 0);
-  updateStreakBannerScrollState();
+.notify-button::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(216, 82, 82, 0.18), rgba(168, 54, 54, 0));
+  opacity: 0.9;
+  pointer-events: none;
 }
-showVolumeDock();
-startHeroTipRotation();
-startCooldownTicker();
-if ("Notification" in window && Notification.permission === "granted") {
-  startNotificationLoop();
-}
-scheduleMidnightRefresh();
 
-window.resetSustainState = function resetSustainState() {
-  state = structuredClone(defaultState);
-  saveState();
-  render();
-};
+.notify-button:hover {
+  color: #fff7f7;
+  border-color: rgba(168, 54, 54, 0.95);
+  background: linear-gradient(135deg, #d85252, #a83636);
+  box-shadow: 0 16px 34px rgba(168, 54, 54, 0.24);
+}
+
+.notify-button:hover::after {
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+.notify-button span {
+  position: relative;
+  z-index: 1;
+}
+
+.notify-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.notify-icon-bell {
+  position: relative;
+  width: 12px;
+  height: 10px;
+  border: 2px solid currentColor;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.notify-icon-bell::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 10px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 999px;
+  transform: translateX(-50%);
+}
+
+.notify-icon-bell::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  transform: translateX(-50%);
+}
+
+.pill,
+.impact-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.preset-list,
+.reminder-list {
+  display: grid;
+  gap: 16px;
+}
+
+.reminder-progress {
+  display: grid;
+  gap: 10px;
+}
+
+.completion-count {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.progress-track {
+  overflow: hidden;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(19, 49, 39, 0.08);
+}
+
+.progress-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--gold), var(--accent));
+  transition: width 220ms ease;
+}
+
+.preset-card,
+.reminder-card {
+  padding: 18px;
+  border-radius: 22px;
+}
+
+.preset-card,
+.reminder-main,
+.reminder-actions {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reminder-card {
+  display: grid;
+  gap: 16px;
+}
+
+.impact-badge {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
+.cooldown-note {
+  min-width: 148px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.complete-button {
+  color: var(--accent-deep);
+}
+
+.complete-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  background: rgba(215, 241, 223, 0.9);
+}
+
+.delete-button {
+  color: #8b5a42;
+}
+
+.empty-state {
+  padding: 22px;
+  border: 1px dashed var(--line);
+  border-radius: 20px;
+  color: var(--muted);
+  text-align: center;
+}
+
+@media (max-width: 960px) {
+  .streak-banner,
+  .hero-grid,
+  .content-grid,
+  .topbar,
+  .panel-head,
+  .list-head,
+  .reminder-main,
+  .reminder-actions,
+  .preset-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero-copy h2 {
+    max-width: none;
+  }
+
+  .streak-scale {
+    text-align: left;
+  }
+
+  .hero-card {
+    width: 100%;
+  }
+
+  .reminder-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .page-shell {
+    width: min(100% - 20px, 1180px);
+  }
+
+  .toast {
+    right: 10px;
+    bottom: 10px;
+  }
+
+  .volume-dock {
+    left: 10px;
+    bottom: 10px;
+  }
+
+  .streak-banner {
+    top: 8px;
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .streak-switcher {
+    justify-content: space-between;
+  }
+
+  .streak-arrow {
+    width: 38px;
+    height: 38px;
+  }
+
+  .hero,
+  .panel {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .pet-companion {
+    width: 170px;
+  }
+
+  .hero-points {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-copy h2 {
+    font-size: clamp(2.4rem, 12vw, 3.7rem);
+  }
+
+  .pet-mood-bubble {
+    padding: 12px;
+  }
+
+  .pet-button {
+    width: 124px;
+    height: 124px;
+  }
+
+  .pet-avatar {
+    width: 96px;
+  }
+}
