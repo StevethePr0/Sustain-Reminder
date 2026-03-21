@@ -11,6 +11,33 @@
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="petCompanion" class="pet-companion" aria-label="Floating Earth pet companion">
+    <div class="pet-mood-bubble">
+      <span id="petStage" class="pet-stage-chip">Seedling planet</span>
+      <p id="petMood" class="pet-mood">Your tiny planet buddy is waiting for today's eco wins.</p>
+      <div class="pet-growth-mini" aria-hidden="true">
+        <span id="petGrowthFill" class="pet-growth-mini-fill"></span>
+      </div>
+      <p id="petGrowthText" class="pet-growth-text">0 streak days to reach sprout world.</p>
+    </div>
+    <button id="petButton" class="pet-button floating-pet" type="button" aria-describedby="petMood petGrowthText petHint">
+      <span class="pet-aura"></span>
+      <span class="pet-spark pet-spark-1"></span>
+      <span class="pet-spark pet-spark-2"></span>
+      <span class="pet-spark pet-spark-3"></span>
+      <span id="petAvatar" class="pet-avatar pet-stage-0" aria-hidden="true">
+        <span class="pet-face">
+          <span class="pet-eye pet-eye-left"></span>
+          <span class="pet-eye pet-eye-right"></span>
+          <span class="pet-mouth"></span>
+        </span>
+        <span class="pet-leaf pet-leaf-left"></span>
+        <span class="pet-leaf pet-leaf-right"></span>
+        <span class="pet-orbit"></span>
+      </span>
+    </button>
+    <p id="petHint" class="pet-hint">Tap Terra for a happy boost.</p>
+  </div>
   <div id="volumeDock" class="volume-dock" aria-label="Music volume control">
     <p id="volumeDockTitle" class="volume-dock-title">Lo-fi Music (15s)</p>
     <input id="volumeSlider" class="volume-slider" type="range" min="0" max="100" value="35" aria-label="Music volume">
@@ -121,43 +148,6 @@
           <p>Best day streak</p>
           <strong><span id="bestStreak">0</span> days</strong>
         </article>
-      </section>
-
-      <section class="panel pet-panel" aria-label="Earth pet companion">
-        <div class="panel-head pet-panel-head">
-          <div>
-            <p class="eyebrow">Streak companion</p>
-            <h3>Terra the Earth pet</h3>
-          </div>
-          <span id="petStage" class="pill">Seedling planet</span>
-        </div>
-        <div class="pet-panel-body">
-          <div class="pet-scene">
-            <button id="petButton" class="pet-button" type="button" aria-describedby="petMood petHint">
-              <span class="pet-aura"></span>
-              <span id="petAvatar" class="pet-avatar pet-stage-0" aria-hidden="true">
-                <span class="pet-face">
-                  <span class="pet-eye pet-eye-left"></span>
-                  <span class="pet-eye pet-eye-right"></span>
-                  <span class="pet-mouth"></span>
-                </span>
-                <span class="pet-leaf pet-leaf-left"></span>
-                <span class="pet-leaf pet-leaf-right"></span>
-                <span class="pet-orbit"></span>
-              </span>
-            </button>
-          </div>
-          <div class="pet-copy">
-            <p id="petMood" class="pet-mood">Your tiny planet buddy is waiting for today's eco wins.</p>
-            <p id="petHint" class="supporting">Tap Terra for a little cheer. Every full daily streak helps it grow greener, brighter, and more alive.</p>
-            <div class="pet-growth">
-              <div class="progress-track pet-growth-track" aria-hidden="true">
-                <span id="petGrowthFill" class="progress-fill pet-growth-fill"></span>
-              </div>
-              <p id="petGrowthText" class="supporting">0 of 5 streak days to the next growth stage.</p>
-            </div>
-          </div>
-        </div>
       </section>
 
       <section class="content-grid" id="planner">
