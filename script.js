@@ -17,6 +17,34 @@ const streakViews = [
   { label: "Yearly streak", goal: 365, unit: "day", scale: "Goal: 365-day habit streak" }
 ];
 
+const petStages = [
+  {
+    name: "Seedling planet",
+    threshold: 0,
+    mood: "Your tiny planet buddy is waiting for today's eco wins."
+  },
+  {
+    name: "Sprout world",
+    threshold: 5,
+    mood: "Terra has started sprouting leaves. Your streak is making the planet feel alive."
+  },
+  {
+    name: "Bloom world",
+    threshold: 10,
+    mood: "Terra is brighter and bolder now. Double-digit streak energy looks good on it."
+  },
+  {
+    name: "Orbit guardian",
+    threshold: 20,
+    mood: "Terra has entered guardian mode, spinning with confidence around your habit streak."
+  },
+  {
+    name: "Legendary eco world",
+    threshold: 35,
+    mood: "Terra is thriving. This streak has turned your little world into a full eco legend."
+  }
+];
+
 const presetHabits = [
   { title: "Bring reusable bottle", frequency: "daily", impact: "both", co2: 0.2, water: 3 },
   { title: "Turn off lights before leaving", frequency: "daily", impact: "co2", co2: 0.4, water: 0 },
@@ -48,7 +76,6 @@ const elements = {
   frequencyInput: document.getElementById("frequencyInput"),
   impactInput: document.getElementById("impactInput"),
   heroTip: document.getElementById("heroTip"),
-  cursorAura: document.getElementById("cursorAura"),
   streakPrevButton: document.getElementById("streakPrevButton"),
   streakNextButton: document.getElementById("streakNextButton"),
   streakBanner: document.querySelector(".streak-banner"),
@@ -70,6 +97,12 @@ const elements = {
   volumeDock: document.getElementById("volumeDock"),
   volumeDockTitle: document.getElementById("volumeDockTitle"),
   volumeSlider: document.getElementById("volumeSlider"),
+  petButton: document.getElementById("petButton"),
+  petAvatar: document.getElementById("petAvatar"),
+  petStage: document.getElementById("petStage"),
+  petMood: document.getElementById("petMood"),
+  petGrowthFill: document.getElementById("petGrowthFill"),
+  petGrowthText: document.getElementById("petGrowthText"),
   presetTemplate: document.getElementById("presetTemplate"),
   reminderTemplate: document.getElementById("reminderTemplate")
 };
@@ -90,59 +123,7 @@ let volumeHideTimer = null;
 let volumeCountdownTimer = null;
 let musicVolume = 0.35;
 let streakBannerTriggerTop = 0;
-
-function bindInteractiveSurface(surface) {
-  if (surface.dataset.cursorBound === "true") {
-    return;
-  }
-
-  surface.dataset.cursorBound = "true";
-  surface.classList.add("interactive-surface");
-
-  surface.addEventListener("mousemove", (event) => {
-    const rect = surface.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / rect.width;
-    const y = (event.clientY - rect.top) / rect.height;
-    const rotateY = (x - 0.5) * 7;
-    const rotateX = (0.5 - y) * 7;
-
-    surface.style.setProperty("--rx", `${rotateX}deg`);
-    surface.style.setProperty("--ry", `${rotateY}deg`);
-    surface.classList.add("is-hovered");
-  });
-
-  surface.addEventListener("mouseleave", () => {
-    surface.style.setProperty("--rx", "0deg");
-    surface.style.setProperty("--ry", "0deg");
-    surface.classList.remove("is-hovered");
-  });
-}
-
-function setupCursorEffects() {
-  if (!window.matchMedia("(pointer:fine)").matches) {
-    return;
-  }
-
-  document.querySelectorAll(
-    ".hero-card, .stats-strip article, .hero-points li, .streak-banner"
-  ).forEach(bindInteractiveSurface);
-
-  if (document.body.dataset.cursorTracking === "true") {
-    return;
-  }
-
-  document.body.dataset.cursorTracking = "true";
-
-  window.addEventListener("mousemove", (event) => {
-    document.body.classList.add("cursor-active");
-    document.body.style.setProperty("--cursor-x", `${event.clientX}px`);
-    document.body.style.setProperty("--cursor-y", `${event.clientY}px`);
-  });
-
-  window.addEventListener("mouseleave", () => {
-    document.body.classList.remove("cursor-active");
-  });
-}
+let petExciteTimer = null;
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -571,6 +552,64 @@ function getImpactTotals() {
   );
 }
 
+function getPetProfile(streakCount) {
+  let stageIndex = 0;
+
+  petStages.forEach((stage, index) => {
+    if (streakCount >= stage.threshold) {
+      stageIndex = index;
+    }
+  });
+
+  const currentStage = petStages[stageIndex];
+  const nextStage = petStages[stageIndex + 1] || null;
+  const previousThreshold = currentStage.threshold;
+  const nextThreshold = nextStage ? nextStage.threshold : currentStage.threshold;
+  const span = Math.max(nextThreshold - previousThreshold, 1);
+  const progress = nextStage ? (streakCount - previousThreshold) / span : 1;
+
+  return {
+    stageIndex,
+    currentStage,
+    nextStage,
+    progress: Math.max(0, Math.min(progress, 1))
+  };
+}
+
+function animatePetExcitement() {
+  if (!elements.petButton) {
+    return;
+  }
+
+  elements.petButton.classList.add("is-excited");
+
+  if (petExciteTimer) {
+    clearTimeout(petExciteTimer);
+  }
+
+  petExciteTimer = window.setTimeout(() => {
+    elements.petButton.classList.remove("is-excited");
+  }, 700);
+}
+
+function getPetCheerLine(profile) {
+  const remaining = profile.nextStage ? profile.nextStage.threshold - state.streak.current : 0;
+
+  if (!state.streak.current) {
+    return "Terra says: finish today's habits and I'll start growing leaves.";
+  }
+
+  if (!profile.nextStage) {
+    return "Terra says: we're at max form now, so let's keep this world glowing.";
+  }
+
+  if (remaining === 1) {
+    return "Terra says: one more streak day and I evolve again.";
+  }
+
+  return `Terra says: ${remaining} more streak days until my ${profile.nextStage.name.toLowerCase()} form.`;
+}
+
 function renderPresets() {
   elements.presetList.innerHTML = "";
 
@@ -680,13 +719,33 @@ function renderImpact() {
   elements.heroStreak.textContent = state.streak.current;
 }
 
+function renderPet() {
+  if (!elements.petAvatar) {
+    return;
+  }
+
+  const profile = getPetProfile(state.streak.current);
+  elements.petAvatar.className = `pet-avatar pet-stage-${profile.stageIndex}`;
+  elements.petStage.textContent = profile.currentStage.name;
+  elements.petMood.textContent = profile.currentStage.mood;
+  elements.petGrowthFill.style.width = `${profile.progress * 100}%`;
+
+  if (!profile.nextStage) {
+    elements.petGrowthText.textContent = "Terra has reached the final growth stage. Keep your streak alive to protect the planet.";
+    return;
+  }
+
+  const remaining = profile.nextStage.threshold - state.streak.current;
+  elements.petGrowthText.textContent = `${remaining} streak day${remaining === 1 ? "" : "s"} to reach ${profile.nextStage.name.toLowerCase()}.`;
+}
+
 function render() {
   renderPresets();
   renderReminders();
   renderImpact();
+  renderPet();
   updateNotificationUI();
   updateCooldownLabels();
-  setupCursorEffects();
 }
 
 elements.reminderForm.addEventListener("submit", (event) => {
@@ -740,6 +799,12 @@ elements.volumeSlider.addEventListener("input", () => {
 
 elements.volumeDock.addEventListener("pointerdown", () => {
   showVolumeDock();
+});
+
+elements.petButton?.addEventListener("click", () => {
+  const profile = getPetProfile(state.streak.current);
+  animatePetExcitement();
+  showToast(getPetCheerLine(profile));
 });
 
 window.addEventListener("mousemove", (event) => {
