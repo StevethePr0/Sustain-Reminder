@@ -94,6 +94,7 @@ const elements = {
   notifyButton: document.getElementById("notifyButton"),
   notifyStatus: document.getElementById("notifyStatus"),
   toast: document.getElementById("toast"),
+  petCompanion: document.getElementById("petCompanion"),
   volumeDock: document.getElementById("volumeDock"),
   volumeDockTitle: document.getElementById("volumeDockTitle"),
   volumeSlider: document.getElementById("volumeSlider"),
@@ -101,6 +102,7 @@ const elements = {
   petAvatar: document.getElementById("petAvatar"),
   petStage: document.getElementById("petStage"),
   petMood: document.getElementById("petMood"),
+  petHint: document.getElementById("petHint"),
   petGrowthFill: document.getElementById("petGrowthFill"),
   petGrowthText: document.getElementById("petGrowthText"),
   presetTemplate: document.getElementById("presetTemplate"),
@@ -124,6 +126,10 @@ let volumeCountdownTimer = null;
 let musicVolume = 0.35;
 let streakBannerTriggerTop = 0;
 let petExciteTimer = null;
+let petBurstTimer = null;
+let petMessageTimer = null;
+let petAnimationFrame = null;
+let petAnimationState = null;
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -576,6 +582,36 @@ function getPetProfile(streakCount) {
   };
 }
 
+function ensurePetAnimationState() {
+  if (petAnimationState || !elements.petCompanion) {
+    return;
+  }
+
+  petAnimationState = {
+    x: Math.max(window.innerWidth - 260, 24),
+    y: 140,
+    vx: -0.13,
+    vy: 0.09,
+    lastTimestamp: 0
+  };
+}
+
+function updatePetSpeech(message, duration = 2600) {
+  if (!elements.petMood) {
+    return;
+  }
+
+  elements.petMood.textContent = message;
+
+  if (petMessageTimer) {
+    clearTimeout(petMessageTimer);
+  }
+
+  petMessageTimer = window.setTimeout(() => {
+    renderPet();
+  }, duration);
+}
+
 function animatePetExcitement() {
   if (!elements.petButton) {
     return;
@@ -590,6 +626,24 @@ function animatePetExcitement() {
   petExciteTimer = window.setTimeout(() => {
     elements.petButton.classList.remove("is-excited");
   }, 700);
+}
+
+function burstPetSparkles() {
+  if (!elements.petCompanion) {
+    return;
+  }
+
+  elements.petCompanion.classList.remove("is-bursting");
+  void elements.petCompanion.offsetWidth;
+  elements.petCompanion.classList.add("is-bursting");
+
+  if (petBurstTimer) {
+    clearTimeout(petBurstTimer);
+  }
+
+  petBurstTimer = window.setTimeout(() => {
+    elements.petCompanion.classList.remove("is-bursting");
+  }, 720);
 }
 
 function getPetCheerLine(profile) {
@@ -608,6 +662,89 @@ function getPetCheerLine(profile) {
   }
 
   return `Terra says: ${remaining} more streak days until my ${profile.nextStage.name.toLowerCase()} form.`;
+}
+
+function getPetDopamineLine(profile) {
+  const lines = [
+    "Tiny win registered. Terra is absolutely glowing.",
+    "That click was immaculate. Terra approves.",
+    "Eco sparkle unlocked. Terra is vibing.",
+    "Streak energy received. Terra feels shinier already."
+  ];
+
+  if (state.streak.current >= 20) {
+    lines.push("Legend status. Terra is orbiting with main-character confidence.");
+  } else if (profile.nextStage) {
+    lines.push(`You're ${profile.nextStage.threshold - state.streak.current} day${profile.nextStage.threshold - state.streak.current === 1 ? "" : "s"} from the next glow-up.`);
+  }
+
+  return lines[Math.floor(Math.random() * lines.length)];
+}
+
+function positionFloatingPet(timestamp) {
+  if (!elements.petCompanion) {
+    return;
+  }
+
+  ensurePetAnimationState();
+
+  if (!petAnimationState) {
+    return;
+  }
+
+  if (!petAnimationState.lastTimestamp) {
+    petAnimationState.lastTimestamp = timestamp;
+  }
+
+  const delta = Math.min(timestamp - petAnimationState.lastTimestamp, 32);
+  petAnimationState.lastTimestamp = timestamp;
+
+  const companionWidth = elements.petCompanion.offsetWidth || 220;
+  const companionHeight = elements.petCompanion.offsetHeight || 220;
+  const margin = 16;
+  const minX = margin;
+  const minY = 92;
+  const maxX = Math.max(window.innerWidth - companionWidth - margin, minX);
+  const maxY = Math.max(window.innerHeight - companionHeight - 20, minY);
+
+  petAnimationState.x += petAnimationState.vx * delta;
+  petAnimationState.y += petAnimationState.vy * delta;
+
+  if (petAnimationState.x <= minX || petAnimationState.x >= maxX) {
+    petAnimationState.vx *= -1;
+    petAnimationState.x = Math.min(Math.max(petAnimationState.x, minX), maxX);
+  }
+
+  if (petAnimationState.y <= minY || petAnimationState.y >= maxY) {
+    petAnimationState.vy *= -1;
+    petAnimationState.y = Math.min(Math.max(petAnimationState.y, minY), maxY);
+  }
+
+  const bob = Math.sin(timestamp / 680) * 8;
+  const tilt = Math.sin(timestamp / 820) * 3;
+  elements.petCompanion.style.transform = `translate(${petAnimationState.x}px, ${petAnimationState.y + bob}px) rotate(${tilt}deg)`;
+
+  petAnimationFrame = window.requestAnimationFrame(positionFloatingPet);
+}
+
+function startFloatingPetMotion() {
+  if (!elements.petCompanion || petAnimationFrame) {
+    return;
+  }
+
+  ensurePetAnimationState();
+  petAnimationFrame = window.requestAnimationFrame(positionFloatingPet);
+}
+
+function clampFloatingPetToViewport() {
+  if (!petAnimationState || !elements.petCompanion) {
+    return;
+  }
+
+  const companionWidth = elements.petCompanion.offsetWidth || 220;
+  const companionHeight = elements.petCompanion.offsetHeight || 220;
+  petAnimationState.x = Math.min(Math.max(petAnimationState.x, 16), Math.max(window.innerWidth - companionWidth - 16, 16));
+  petAnimationState.y = Math.min(Math.max(petAnimationState.y, 92), Math.max(window.innerHeight - companionHeight - 20, 92));
 }
 
 function renderPresets() {
@@ -729,6 +866,9 @@ function renderPet() {
   elements.petStage.textContent = profile.currentStage.name;
   elements.petMood.textContent = profile.currentStage.mood;
   elements.petGrowthFill.style.width = `${profile.progress * 100}%`;
+  elements.petHint.textContent = state.streak.current
+    ? `Terra is floating on a ${state.streak.current}-day streak glow.`
+    : "Tap Terra for a happy boost.";
 
   if (!profile.nextStage) {
     elements.petGrowthText.textContent = "Terra has reached the final growth stage. Keep your streak alive to protect the planet.";
@@ -804,6 +944,8 @@ elements.volumeDock.addEventListener("pointerdown", () => {
 elements.petButton?.addEventListener("click", () => {
   const profile = getPetProfile(state.streak.current);
   animatePetExcitement();
+  burstPetSparkles();
+  updatePetSpeech(getPetDopamineLine(profile), 2200);
   showToast(getPetCheerLine(profile));
 });
 
@@ -817,11 +959,13 @@ window.addEventListener("scroll", updateStreakBannerScrollState, { passive: true
 
 window.addEventListener("resize", () => {
   if (!elements.streakBanner) {
+    clampFloatingPetToViewport();
     return;
   }
 
   streakBannerTriggerTop = Math.max(elements.streakBanner.offsetTop - 10, 0);
   updateStreakBannerScrollState();
+  clampFloatingPetToViewport();
 });
 
 elements.streakPrevButton.addEventListener("click", () => {
@@ -835,6 +979,7 @@ elements.streakNextButton.addEventListener("click", () => {
 });
 
 render();
+startFloatingPetMotion();
 if (elements.streakBanner) {
   streakBannerTriggerTop = Math.max(elements.streakBanner.offsetTop - 10, 0);
   updateStreakBannerScrollState();
