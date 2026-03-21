@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sustain Reminder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="volumeDock" class="volume-dock" aria-label="Music volume control">
+    <p id="volumeDockTitle" class="volume-dock-title">Lo-fi Music (15s)</p>
+    <input id="volumeSlider" class="volume-slider" type="range" min="0" max="100" value="35" aria-label="Music volume">
+  </div>
+  <div id="cursorAura" class="cursor-aura" aria-hidden="true"></div>
+  <div class="page-shell">
+    <section class="streak-banner" aria-label="Current streak overview">
+      <div class="streak-banner-copy">
+        <div class="streak-switcher">
+          <button id="streakPrevButton" class="streak-arrow" type="button" aria-label="Show previous streak range">&#8592;</button>
+          <p id="streakBannerLabel" class="eyebrow">Weekly streak</p>
+          <button id="streakNextButton" class="streak-arrow" type="button" aria-label="Show next streak range">&#8594;</button>
+        </div>
+        <div class="streak-headline">
+          <strong><span id="streakBannerValue">0</span> days</strong>
+          <span id="streakBannerMeta" class="streak-meta">Keep your eco momentum alive today.</span>
+        </div>
+      </div>
+      <div class="streak-banner-progress">
+        <div class="streak-progress-track" aria-hidden="true">
+          <span id="streakBannerFill" class="streak-progress-fill"></span>
+        </div>
+        <p id="streakScale" class="streak-scale">Goal: 7-day habit streak</p>
+      </div>
+    </section>
+
+    <header class="hero">
+      <nav class="topbar">
+        <div class="brand">
+          <span class="brand-mark">S</span>
+          <div>
+            <p class="eyebrow">Sustainable reminders</p>
+            <h1>Sustain</h1>
+          </div>
+        </div>
+        <a class="ghost-button" href="#planner">Build your habit plan</a>
+      </nav>
+
+      <div class="hero-grid">
+        <section class="hero-copy">
+          <p class="tag">Tiny nudges. Real climate impact.</p>
+          <h2 id="heroTip">A reminder app that helps people turn good intentions into greener routines.</h2>
+          <p class="hero-text">
+            Keep eco habits visible with custom reminders, easy starter actions, streak tracking,
+            and a live impact dashboard for CO2 and water savings.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-button" href="#planner">Start your eco streak</a>
+            <a class="secondary-button" href="#impact">See impact tracker</a>
+            <button class="ghost-button notify-button" id="notifyButton" type="button">
+              <span class="notify-icon" aria-hidden="true">
+                <span class="notify-icon-bell"></span>
+              </span>
+              <span>Enable 6-hour reminders</span>
+            </button>
+          </div>
+          <p class="notify-note" id="notifyStatus">Notifications are off. Turn them on to get a sustainable habit nudge every 6 hours while this page is open.</p>
+          <ul class="hero-points">
+            <li>Custom reminders for your day</li>
+            <li>Pre-built eco habit list</li>
+            <li>Daily and weekly streaks</li>
+            <li>Impact tracker with meaningful stats</li>
+          </ul>
+        </section>
+
+        <aside class="hero-card">
+          <p class="mini-label">Today&apos;s focus</p>
+          <div class="focus-list">
+            <article>
+              <span>07:30</span>
+              <strong>Bring reusable bottle</strong>
+            </article>
+            <article>
+              <span>18:00</span>
+              <strong>Turn off lights before leaving</strong>
+            </article>
+            <article>
+              <span>All day</span>
+              <strong>Meat-free day today</strong>
+            </article>
+          </div>
+          <div class="card-meter">
+            <p>Weekly streak</p>
+            <strong><span id="heroStreak">5</span> days</strong>
+          </div>
+        </aside>
+      </div>
+    </header>
+
+    <main>
+      <section class="stats-strip" id="impact">
+        <article>
+          <p>Current day streak</p>
+          <strong><span id="currentStreak">0</span> days</strong>
+        </article>
+        <article>
+          <p>Habits completed</p>
+          <strong id="completedCount">0</strong>
+        </article>
+        <article>
+          <p>CO2 saved</p>
+          <strong><span id="co2Value">0.0</span> kg</strong>
+        </article>
+        <article>
+          <p>Water saved</p>
+          <strong><span id="waterValue">0</span> L</strong>
+        </article>
+        <article>
+          <p>Best day streak</p>
+          <strong><span id="bestStreak">0</span> days</strong>
+        </article>
+      </section>
+
+      <section class="content-grid" id="planner">
+        <section class="panel planner-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Planner</p>
+              <h3>Create your sustainable reminders</h3>
+            </div>
+          </div>
+
+          <form id="reminderForm" class="reminder-form">
+            <label>
+              Reminder title
+              <input id="titleInput" name="title" type="text" placeholder="Take shorter shower" maxlength="60" required>
+            </label>
+            <label>
+              Schedule
+              <select id="frequencyInput" name="frequency">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </label>
+            <label>
+              Impact type
+              <select id="impactInput" name="impact">
+                <option value="co2">CO2 saver</option>
+                <option value="water">Water saver</option>
+                <option value="both">Mixed impact</option>
+              </select>
+            </label>
+            <button class="primary-button" type="submit">Add reminder</button>
+          </form>
+
+          <div class="list-head">
+            <div>
+              <p class="eyebrow">My reminders</p>
+              <h3>Active habits</h3>
+            </div>
+            <span class="pill" id="reminderCount">0 reminders</span>
+          </div>
+          <div id="reminderList" class="reminder-list" aria-live="polite"></div>
+        </section>
+
+        <section class="panel library-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Starter pack</p>
+              <h3>Pre-built eco habits</h3>
+            </div>
+            <p class="supporting">One tap adds these to your planner.</p>
+          </div>
+          <div id="presetList" class="preset-list"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <template id="presetTemplate">
+    <article class="preset-card">
+      <div>
+        <p class="preset-frequency"></p>
+        <h4></h4>
+      </div>
+      <button type="button" class="secondary-button add-preset">Add</button>
+    </article>
+  </template>
+
+  <template id="reminderTemplate">
+    <article class="reminder-card">
+      <div class="reminder-main">
+        <div>
+          <p class="reminder-frequency"></p>
+          <h4></h4>
+        </div>
+        <span class="impact-badge"></span>
+      </div>
+      <div class="reminder-progress">
+        <p class="completion-count"></p>
+        <div class="progress-track" aria-hidden="true">
+          <span class="progress-fill"></span>
+        </div>
+      </div>
+      <div class="reminder-actions">
+        <span class="cooldown-note" aria-live="polite"></span>
+        <button type="button" class="complete-button">Mark done</button>
+        <button type="button" class="delete-button">Remove</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
