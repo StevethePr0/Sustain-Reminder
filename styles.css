@@ -532,6 +532,7 @@ label,
 }
 
 .pet-aura {
+  display: block;
   position: absolute;
   width: 220px;
   height: 220px;
@@ -544,6 +545,7 @@ label,
 
 .pet-avatar {
   --pet-scale: 1;
+  display: block;
   position: relative;
   width: 148px;
   aspect-ratio: 1;
@@ -584,6 +586,7 @@ label,
 }
 
 .pet-face {
+  display: block;
   position: absolute;
   inset: 0;
 }
