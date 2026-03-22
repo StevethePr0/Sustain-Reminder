@@ -11,6 +11,7 @@
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="confettiLayer" class="confetti-layer" aria-hidden="true"></div>
   <div id="petCompanion" class="pet-companion" aria-label="Floating Earth pet companion">
     <div class="pet-mood-bubble">
       <span id="petStage" class="pet-stage-chip">Seedling planet</span>
@@ -225,12 +226,7 @@
         </div>
         <span class="impact-badge"></span>
       </div>
-      <div class="reminder-progress">
-        <p class="completion-count"></p>
-        <div class="progress-track" aria-hidden="true">
-          <span class="progress-fill"></span>
-        </div>
-      </div>
+      <p class="completion-count"></p>
       <div class="reminder-actions">
         <span class="cooldown-note" aria-live="polite"></span>
         <button type="button" class="complete-button">Mark done</button>
