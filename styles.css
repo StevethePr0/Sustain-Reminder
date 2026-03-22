@@ -44,6 +44,44 @@ body::before {
   mask-image: radial-gradient(circle at center, black 55%, transparent 90%);
 }
 
+.cursor-orb,
+.cursor-trail {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 90;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(-50%, -50%, 0);
+  transition: opacity 180ms ease;
+}
+
+.cursor-orb {
+  width: 18px;
+  height: 18px;
+  background: radial-gradient(circle, rgba(255, 248, 209, 0.95) 0%, rgba(127, 227, 140, 0.72) 52%, rgba(127, 227, 140, 0) 100%);
+  box-shadow: 0 0 18px rgba(127, 227, 140, 0.42);
+}
+
+.cursor-trail {
+  width: 54px;
+  height: 54px;
+  background: radial-gradient(circle, rgba(240, 194, 91, 0.22) 0%, rgba(127, 227, 140, 0.12) 48%, rgba(127, 227, 140, 0) 76%);
+  filter: blur(1px);
+}
+
+.cursor-trail.cursor-trail-far {
+  width: 86px;
+  height: 86px;
+  background: radial-gradient(circle, rgba(127, 227, 140, 0.12) 0%, rgba(127, 227, 140, 0.05) 48%, rgba(127, 227, 140, 0) 76%);
+}
+
+body.cursor-effect-active .cursor-orb,
+body.cursor-effect-active .cursor-trail {
+  opacity: 1;
+}
+
 .page-shell {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
@@ -1374,3 +1412,12 @@ button:hover,
     padding: 12px;
   }
 
+  .pet-button {
+    width: 124px;
+    height: 124px;
+  }
+
+  .pet-avatar {
+    width: 96px;
+  }
+}
