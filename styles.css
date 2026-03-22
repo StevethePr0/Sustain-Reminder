@@ -80,6 +80,36 @@ body::before {
   transform: translateY(0);
 }
 
+.confetti-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -24px;
+  width: 12px;
+  height: 20px;
+  border-radius: 4px;
+  opacity: 0.95;
+  animation: confettiFall linear forwards;
+}
+
+@keyframes confettiFall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate3d(var(--drift-x), 110vh, 0) rotate(var(--spin));
+    opacity: 0;
+  }
+}
+
 .volume-dock {
   position: fixed;
   left: 20px;
@@ -1204,31 +1234,10 @@ button:hover,
   gap: 16px;
 }
 
-.reminder-progress {
-  display: grid;
-  gap: 10px;
-}
-
 .completion-count {
   margin: 0;
   color: var(--muted);
   font-size: 0.95rem;
-}
-
-.progress-track {
-  overflow: hidden;
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(19, 49, 39, 0.08);
-}
-
-.progress-fill {
-  display: block;
-  height: 100%;
-  width: 0;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--gold), var(--accent));
-  transition: width 220ms ease;
 }
 
 .preset-card,
@@ -1365,12 +1374,3 @@ button:hover,
     padding: 12px;
   }
 
-  .pet-button {
-    width: 124px;
-    height: 124px;
-  }
-
-  .pet-avatar {
-    width: 96px;
-  }
-}
