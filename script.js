@@ -795,6 +795,57 @@
     petAnimationState.laneOffset = Math.min(Math.max(petAnimationState.laneOffset, -18), 18);
   }
 
+  function initCursorEffect() {
+    if (!window.matchMedia("(pointer: fine)").matches) {
+      return;
+    }
+
+    const orb = document.createElement("span");
+    const nearTrail = document.createElement("span");
+    const farTrail = document.createElement("span");
+    orb.className = "cursor-orb";
+    nearTrail.className = "cursor-trail";
+    farTrail.className = "cursor-trail cursor-trail-far";
+    document.body.append(nearTrail, farTrail, orb);
+
+    const points = {
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+      nearX: window.innerWidth / 2,
+      nearY: window.innerHeight / 2,
+      farX: window.innerWidth / 2,
+      farY: window.innerHeight / 2
+    };
+
+    let rafId = null;
+
+    const animate = () => {
+      points.nearX += (points.x - points.nearX) * 0.18;
+      points.nearY += (points.y - points.nearY) * 0.18;
+      points.farX += (points.x - points.farX) * 0.1;
+      points.farY += (points.y - points.farY) * 0.1;
+
+      orb.style.transform = `translate3d(${points.x}px, ${points.y}px, 0) translate(-50%, -50%)`;
+      nearTrail.style.transform = `translate3d(${points.nearX}px, ${points.nearY}px, 0) translate(-50%, -50%)`;
+      farTrail.style.transform = `translate3d(${points.farX}px, ${points.farY}px, 0) translate(-50%, -50%)`;
+
+      rafId = window.requestAnimationFrame(animate);
+    };
+
+    window.addEventListener("mousemove", (event) => {
+      points.x = event.clientX;
+      points.y = event.clientY;
+      document.body.classList.add("cursor-effect-active");
+      if (!rafId) {
+        rafId = window.requestAnimationFrame(animate);
+      }
+    });
+
+    window.addEventListener("mouseleave", () => {
+      document.body.classList.remove("cursor-effect-active");
+    });
+  }
+
   function renderPresets() {
     elements.presetList.innerHTML = "";
 
@@ -1034,6 +1085,7 @@
   });
 
   render();
+  initCursorEffect();
   startFloatingPetMotion();
   if (elements.streakBanner) {
     streakBannerTriggerTop = Math.max(elements.streakBanner.offsetTop - 10, 0);
